@@ -1,1 +1,3 @@
-# PROJETE2026
+<h2 style="text-align: center;">SafeStock</h2>
+<h4 style="text-align: center;"><em>Projete 2k24&nbsp;2401</em></h4>
+<p style="text-align: center;"><span style="text-decoration: underline;"><span style="font-family: 'Times New Roman'; font-size: 11.0pt;">Elisa Renn&oacute; Costa<br /></span><span style="font-family: 'Times New Roman'; font-size: 11.0pt;">Lara Cecilia Eug&ecirc;nio Santos<br /></span><span style="font-family: 'Times New Roman'; font-size: 11.0pt;">Lu&iacute;s Ant&ocirc;nio Barbosa Pereira<br /></span><span style="font-family: 'Times New Roman'; font-size: 11.0pt;">Nicoly Rocha dos Anjos<br /></span><span style="font-family: 'Times New Roman'; font-size: 11.0pt;">Sophia Silva Faria</span></span></p>

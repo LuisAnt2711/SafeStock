@@ -12,6 +12,10 @@
 // INSTANCIANDO OBJETOS
 LiquidCrystal_I2C lcd(endereco, colunas, linhas);
 
+int z = -1;
+int x = 0;
+int y = 0;
+
 void setup() {
   delay(2000);
   lcd.init();
@@ -21,9 +25,10 @@ void setup() {
 
 void loop() {
 
-  int z;
-  int x = 0;
-  int y = 0;
+  x=0;
+  y=0;
+  z+=1;
+  if(z>9){z=0;}
   
   // zera
   while(x<20){
@@ -50,6 +55,6 @@ void loop() {
     lcd.setCursor(x,y); lcd.print(z); x-=1;
     delay(100);
   }x = 0; y = 3;
-  if(z>9){z=0;}
+  
 
 }

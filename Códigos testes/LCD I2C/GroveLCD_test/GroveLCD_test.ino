@@ -27,9 +27,9 @@
 
 rgb_lcd lcd;
 
-int r = 100;
-int g = 200;
-int b = 200;
+int r = 0;
+int g = 0;
+int b = 0;
 
 void setup() {
     // set up the LCD's number of columns and rows:
@@ -39,6 +39,7 @@ void setup() {
     lcd.print("hello, world!");
 
     lcd.setRGB(r,g,b);
+    lcd.setPWM(BLUE,255);
 
     delay(1000);
 }

@@ -19,9 +19,9 @@ char matriz_teclas[LINHAS][COLUNAS] =
 };
  
 //Definicao dos pinos das linhas
-byte PinosLinhas[LINHAS] = {47, 43, 41, 51};
+byte PinosLinhas[LINHAS] = {46, 50, 52, 42};
 //Definicao dos pinos das colunas
-byte PinosColunas[COLUNAS] = {45, 53, 49};
+byte PinosColunas[COLUNAS] = {48, 40, 44};
  
 //Inicializa o teclado
 Keypad meuteclado = Keypad( makeKeymap(matriz_teclas), PinosLinhas, 

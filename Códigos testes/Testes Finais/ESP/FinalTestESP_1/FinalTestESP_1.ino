@@ -7,8 +7,8 @@
 // CONFIGURAÇÃO DO WI-FI
 // =====================================================
 
-const char* ssid = "Monica";
-const char* password = "familia123";
+const char* ssid = "moto g(10)_9303";
+const char* password = "2711Luis";
 
 // =====================================================
 // CONFIGURAÇÃO DE DATA E HORA
@@ -87,6 +87,9 @@ String identificarPessoa(int id) {
 
     case 9:
       return "Elisa Rennó Costa";
+
+    case 4:
+      return "Lara Cecilia Santos";
 
     default:
       return "Desconhecido";

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Stock - Controle Inteligente</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- SDK do EmailJS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body id="corpo-pagina" class="login-body">
+
+    <!-- TELA DE LOGIN / AUTENTICAÇÃO -->
+    <div id="login-section" class="container" style="max-width: 420px; background: #ffffff;">
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 3.5rem; margin-bottom: 5px;">💊</div>
+            <h1>Safe Stock</h1>
+            <p class="subtitle" style="margin-bottom: 0;">Plataforma Profissional de Controle e Gestão de Medicamentos</p>
+        </div>
+            
+        <form id="form-autenticacao">
+            <div class="input-group">
+                <label for="user-email">E-mail Profissional:</label>
+                <input type="email" id="user-email" required placeholder="seu.email@exemplo.com">
+            </div>
+
+            <div class="input-group">
+                <label for="user-senha">Senha de Acesso:</label>
+                <input type="password" id="user-senha" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" style="width: 100%; margin-top: 10px;">Entrar no Sistema</button>
+        </form>
+    </div>
+
+    <!-- PAINEL PRINCIPAL -->
+    <div id="estoque-section" class="container" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <h1>Safe Stock</h1>
+            <button id="btn-sair" style="background-color: #d32f2f; padding: 7px 14px; font-size: 0.85rem;">Sair / Trocar Usuário</button>
+        </div>
+        <p class="subtitle">Painel de Gestão e Controle de Medicamentos</p>
+
+        <!-- Menu de Abas (Navegação Superior) -->
+        <div style="margin-bottom: 25px; display: flex; gap: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; flex-wrap: wrap;">
+            <button id="tab-estoque" style="background-color: #d32f2f; color: white;">📦 Controle de Estoque</button>
+            <button id="tab-historico" style="background-color: #64748b; color: white;">📋 Histórico de Acessos</button>
+            <button id="tab-retirada" style="background-color: #64748b; color: white;">📷 Histórico de Retirada (Webcam)</button>
+        </div>
+
+        <!-- CONTEÚDO DA ABA ESTOQUE -->
+        <div id="conteudo-estoque">
+            <!-- Alerta Global -->
+            <div id="alerta-vencidos" class="alert-box" style="display: none;">
+                <span id="texto-alerta"></span>
+            </div>
+
+            <!-- Formulário de Cadastro / Edição -->
+            <form id="medication-form" style="margin-bottom: 40px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h2>Cadastrar / Editar Medicamento</h2>
+                
+                <div class="form-group">
+                    <label for="med-name">Nome do Medicamento:</label>
+                    <input type="text" id="med-name" required placeholder="Ex: Paracetamol 500mg">
+                </div>
+
+                <div class="form-group">
+                    <label for="med-quantity">Quantidade:</label>
+                    <input type="number" id="med-quantity" required min="0" placeholder="Ex: 10">
+                </div>
+
+                <div class="form-group">
+                    <label for="med-expiry">Data de Validade:</label>
+                    <input type="date" id="med-expiry" required>
+                </div>
+
+                <!-- Campo Fileira -->
+                <div class="form-group">
+                    <label for="med-fileira">Fileira:</label>
+                    <input type="text" id="med-fileira" required placeholder="Ex: A">
+                </div>
+
+                <!-- Campo Coluna -->
+                <div class="form-group">
+                    <label for="med-coluna">Coluna:</label>
+                    <input type="text" id="med-coluna" required placeholder="Ex: 3">
+                </div>
+
+                <button type="submit">Salvar Medicamento</button>
+            </form>
+
+            <!-- Tabela de Medicamentos -->
+            <div class="table-container">
+                <h2>Medicamentos Cadastrados</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Quantidade</th>
+                            <th>Validade / Status</th>
+                            <th>Fileira</th>
+                            <th>Coluna</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="medication-list">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO DA ABA HISTÓRICO DE ACESSOS -->
+        <div id="conteudo-historico" style="display: none;">
+            <div class="table-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <h2>Histórico de Acessos (Sensor Biométrico)</h2>
+                        <p style="color: #64748b; margin-bottom: 0; font-size: 0.9rem;">Aqui aparecem os registros enviados pelo sensor após a leitura da digital.</p>
+                    </div>
+                    <button onclick="limparHistoricoAcessos()" style="background-color: #d32f2f; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500;">
+                        🗑️ Limpar Histórico
+                    </button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuário / ID</th>
+                            <th>ID do Remédio</th>
+                            <th>Quantidade</th>
+                            <th>Data e Hora do Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historico-list">
+                        <!-- Preenchido automaticamente pelo ESP32 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO DA ABA HISTÓRICO DE RETIRADA (WEBCAM) -->
+        <div id="conteudo-retirada" style="display: none;">
+            <div class="table-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <h2>Histórico de Retirada (Webcam / Prateleira)</h2>
+                        <p style="color: #64748b; margin-bottom: 0; font-size: 0.9rem;">Registros de itens retirados detectados pela câmera e abatidos do estoque.</p>
+                    </div>
+                    <button onclick="limparHistoricoRetiradas()" style="background-color: #d32f2f; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500;">
+                        🗑️ Limpar Retiradas
+                    </button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuário / Acesso</th>
+                            <th>Medicamento Retirado</th>
+                            <th>Qtd Retirada</th>
+                            <th>Data e Hora</th>
+                            <th>Status no Estoque</th>
+                        </tr>
+                    </thead>
+                    <tbody id="retirada-list">
+                        <!-- Preenchido automaticamente pela detecção da webcam -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Controle de Telas, Abas e Comunicação com o ESP32 -->
+    <script>
+        const formAuth = document.getElementById('form-autenticacao');
+        const loginSection = document.getElementById('login-section');
+        const estoqueSection = document.getElementById('estoque-section');
+        const corpoPagina = document.getElementById('corpo-pagina');
+        const btnSair = document.getElementById('btn-sair');
+
+        const tabEstoque = document.getElementById('tab-estoque');
+        const tabHistorico = document.getElementById('tab-historico');
+        const tabRetirada = document.getElementById('tab-retirada');
+
+        const conteudoEstoque = document.getElementById('conteudo-estoque');
+        const conteudoHistorico = document.getElementById('conteudo-historico');
+        const conteudoRetirada = document.getElementById('conteudo-retirada');
+
+        formAuth.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loginSection.style.display = 'none';
+            corpoPagina.classList.remove('login-body');
+            estoqueSection.style.display = 'block';
+            atualizarTabelaHistorico();
+            atualizarTabelaRetirada();
+        });
+
+        btnSair.addEventListener('click', function() {
+            estoqueSection.style.display = 'none';
+            corpoPagina.classList.add('login-body');
+            loginSection.style.display = 'block';
+            formAuth.reset();
+        });
+
+        // Controle de Abas
+        function alternarAba(abaAtiva) {
+            conteudoEstoque.style.display = 'none';
+            conteudoHistorico.style.display = 'none';
+            conteudoRetirada.style.display = 'none';
+
+            tabEstoque.style.backgroundColor = '#64748b';
+            tabHistorico.style.backgroundColor = '#64748b';
+            tabRetirada.style.backgroundColor = '#64748b';
+
+            if (abaAtiva === 'estoque') {
+                conteudoEstoque.style.display = 'block';
+                tabEstoque.style.backgroundColor = '#d32f2f';
+            } else if (abaAtiva === 'historico') {
+                conteudoHistorico.style.display = 'block';
+                tabHistorico.style.backgroundColor = '#d32f2f';
+                atualizarTabelaHistorico();
+            } else if (abaAtiva === 'retirada') {
+                conteudoRetirada.style.display = 'block';
+                tabRetirada.style.backgroundColor = '#d32f2f';
+                atualizarTabelaRetirada();
+            }
+        }
+
+        tabEstoque.addEventListener('click', () => alternarAba('estoque'));
+        tabHistorico.addEventListener('click', () => alternarAba('historico'));
+        tabRetirada.addEventListener('click', () => alternarAba('retirada'));
+
+        window.atualizarTabelaHistorico = function() {
+            const historicoList = document.getElementById('historico-list');
+            if (!historicoList) return;
+            
+            historicoList.innerHTML = '';
+            const historico = JSON.parse(localStorage.getItem('historicoAcessos')) || [];
+
+            if (historico.length === 0) {
+                historicoList.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 20px;">Nenhum acesso registrado pelo sensor ainda.</td></tr>';
+                return;
+            }
+
+            historico.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${item.id}</td>
+                    <td>${item.idRemedio || '-'}</td>
+                    <td>${item.quantidade || '-'}</td>
+                    <td>${item.dataHora}</td>
+                `;
+                historicoList.appendChild(tr);
+            });
+        };
+
+        window.atualizarTabelaRetirada = function() {
+            const retiradaList = document.getElementById('retirada-list');
+            if (!retiradaList) return;
+            
+            retiradaList.innerHTML = '';
+            const retiradas = JSON.parse(localStorage.getItem('historicoRetiradas')) || [];
+
+            if (retiradas.length === 0) {
+                retiradaList.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">Nenhuma retirada detectada pela webcam ainda.</td></tr>';
+                return;
+            }
+
+            retiradas.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${item.usuario}</td>
+                    <td>${item.remedio}</td>
+                    <td><strong style="color: #d32f2f;">-${item.quantidadeRetirada}</strong></td>
+                    <td>${item.dataHora}</td>
+                    <td><span style="color: #2e7d32; font-weight: bold;">✔ Estoque Atualizado</span></td>
+                `;
+                retiradaList.appendChild(tr);
+            });
+        };
+
+        window.limparHistoricoAcessos = function() {
+            if (confirm("Tem certeza que deseja apagar todo o histórico de acessos?")) {
+                localStorage.removeItem('historicoAcessos');
+                atualizarTabelaHistorico();
+            }
+        };
+
+        window.limparHistoricoRetiradas = function() {
+            if (confirm("Tem certeza que deseja apagar o histórico de retiradas da webcam?")) {
+                localStorage.removeItem('historicoRetiradas');
+                atualizarTabelaRetirada();
+            }
+        };
+
+        // =====================================================
+        // INTEGRAÇÃO COM O ESP32 (BUSCA AUTOMÁTICA E BAIXA NO ESTOQUE)
+        // =====================================================
+        const IP_ESP32 = "http://192.168.0.192";
+
+        function buscarDadosDoESP32() {
+            fetch(`${IP_ESP32}/dados`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Erro ao conectar');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.id && data.id !== -1 && data.nome !== "Desconhecido") {
+                        const dataHoraAtual = `${data.data} às ${data.hora}`;
+                        const usuarioFormatado = `${data.nome} (ID: ${data.id})`;
+                        const nomeRemedio = data.idRemedio || "";
+                        const qtdRetirada = Number(data.quantidade) || 1;
+
+                        const registroFormatado = {
+                            id: usuarioFormatado,
+                            idRemedio: nomeRemedio || "-",
+                            quantidade: qtdRetirada || "-",
+                            dataHora: dataHoraAtual
+                        };
+
+                        let historico = JSON.parse(localStorage.getItem('historicoAcessos')) || [];
+                        const ultimoRegistro = historico[0];
+                        const textoNovo = `${registroFormatado.id}-${registroFormatado.idRemedio}-${registroFormatado.quantidade}-${registroFormatado.dataHora}`;
+                        const textoAntigo = ultimoRegistro ? `${ultimoRegistro.id}-${ultimoRegistro.idRemedio}-${ultimoRegistro.quantidade}-${ultimoRegistro.dataHora}` : '';
+
+                        if (textoNovo !== textoAntigo) {
+                            historico.unshift(registroFormatado);
+                            localStorage.setItem('historicoAcessos', JSON.stringify(historico));
+                            atualizarTabelaHistorico();
+
+                            if (nomeRemedio && nomeRemedio !== "-") {
+                                let medications = JSON.parse(localStorage.getItem('medications')) || [];
+                                let medicamentoEncontrado = medications.find(med => med.name.toLowerCase().includes(nomeRemedio.toLowerCase()));
+
+                                if (medicamentoEncontrado) {
+                                    let estoqueAtual = Number(medicamentoEncontrado.quantity);
+                                    medicamentoEncontrado.quantity = Math.max(0, estoqueAtual - qtdRetirada);
+                                    localStorage.setItem('medications', JSON.stringify(medications));
+
+                                    if (typeof saveAndRender === 'function') {
+                                        saveAndRender();
+                                    }
+
+                                    let historicoRetiradas = JSON.parse(localStorage.getItem('historicoRetiradas')) || [];
+                                    const novaRetirada = {
+                                        usuario: usuarioFormatado,
+                                        remedio: medicamentoEncontrado.name,
+                                        quantidadeRetirada: qtdRetirada,
+                                        dataHora: dataHoraAtual,
+                                        timestamp: new Date().getTime()
+                                    };
+
+                                    const ultimaRetirada = historicoRetiradas[0];
+                                    if (!ultimaRetirada || (novaRetirada.timestamp - ultimaRetirada.timestamp > 5000)) {
+                                        historicoRetiradas.unshift(novaRetirada);
+                                        localStorage.setItem('historicoRetiradas', JSON.stringify(historicoRetiradas));
+                                        atualizarTabelaRetirada();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    // ESP32 offline ou inacessível no momento
+                });
+        }
+
+        setInterval(buscarDadosDoESP32, 3000);
+    </script>
+
+    <!-- Chamada do arquivo script.js externo -->
+    <script src="script.js"></script>
+</body>
+</html>

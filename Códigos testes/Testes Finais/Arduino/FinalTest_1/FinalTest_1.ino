@@ -1,3 +1,4 @@
+
 #include <Adafruit_Fingerprint.h>
 #include <Keypad.h>
 #include <LiquidCrystal_I2C.h>
@@ -232,7 +233,7 @@ void loop() {
 
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("ID do remedio:");
+      lcd.print("Coluna do remedio:");
 
       lcd.setCursor(0, 1);
       lcd.print("> ");

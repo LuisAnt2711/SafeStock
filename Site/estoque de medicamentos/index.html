@@ -150,6 +150,13 @@
                         🗑️ Limpar Retiradas
                     </button>
                 </div>
+
+                <!-- Transmissão da Webcam integrando o Python/Flask -->
+                <div style="text-align: center; margin: 20px 0; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin-bottom: 10px; font-size: 1.1rem; color: #1e293b;">🎥 Transmissão da Câmera em Tempo Real</h3>
+                    <img src="http://127.0.0.1:5000/video_feed" alt="A carregar transmissão da webcam..." style="width: 100%; max-width: 640px; border-radius: 6px; border: 2px solid #cbd5e1;">
+                </div>
+
                 <table>
                     <thead>
                         <tr>
@@ -168,7 +175,10 @@
         </div>
     </div>
 
-    <!-- Script de Controle de Telas, Abas e Comunicação com o ESP32 -->
+    <!-- 1. Chamada do arquivo script.js externo PRIMEIRO (para carregar funções globais como saveAndRender) -->
+    <script src="script.js"></script>
+
+    <!-- 2. Script de Controle de Telas, Abas e Comunicação com o ESP32 -->
     <script>
         const formAuth = document.getElementById('form-autenticacao');
         const loginSection = document.getElementById('login-section');
@@ -366,8 +376,5 @@
 
         setInterval(buscarDadosDoESP32, 3000);
     </script>
-
-    <!-- Chamada do arquivo script.js externo -->
-    <script src="script.js"></script>
 </body>
 </html>

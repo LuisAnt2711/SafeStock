@@ -1,4 +1,4 @@
-
+#include <FastLED.h>
 #include <Adafruit_Fingerprint.h>
 #include <Keypad.h>
 #include <LiquidCrystal_I2C.h>
@@ -19,6 +19,16 @@ const String nameLuis = "Luis Antonio Barbosa Pereira";
 
 const int ledVerde = 3;
 const int ledVermelho = 2;
+
+// =====================================================
+// CONFIGURAÇÃO DA FITA DE LED
+// =====================================================
+
+#define NUM_LEDS 73
+#define DATA_PIN 6
+#define BRILHO 80
+
+CRGB leds[NUM_LEDS];
 
 // =====================================================
 // BOTÃO DE ENCERRAR ACESSO
@@ -126,6 +136,15 @@ void setup() {
   digitalWrite(ledVermelho, LOW);
 
   // ---------------------------------------------------
+  // FITA DE LED
+  // ---------------------------------------------------
+
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds,NUM_LEDS);
+  FastLED.setBrightness(BRILHO);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+
+  // ---------------------------------------------------
   // BOTÃO
   // ---------------------------------------------------
 
@@ -215,6 +234,8 @@ void loop() {
       // LED VERDE
       digitalWrite(ledVerde, HIGH);
       digitalWrite(ledVermelho, LOW);
+      fill_solid(leds, NUM_LEDS, CRGB::Green);
+      FastLED.show();
 
       // Entra no estado de acesso
       estadoAtual = DIGITANDO_REMEDIO;
@@ -253,6 +274,8 @@ void loop() {
 
       digitalWrite(ledVermelho, HIGH);
       digitalWrite(ledVerde, LOW);
+      fill_solid(leds, NUM_LEDS, CRGB::Red);
+      FastLED.show();
 
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -264,6 +287,8 @@ void loop() {
       delay(2000);
 
       digitalWrite(ledVermelho, LOW);
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
 
       mostrarAguardandoDigital();
     }
@@ -452,6 +477,8 @@ void loop() {
 
         // Desliga LED verde
         digitalWrite(ledVerde, LOW);
+        fill_solid(leds, NUM_LEDS, CRGB::Black);
+        FastLED.show();
 
         // Volta para o início
         estadoAtual = AGUARDANDO_DIGITAL;

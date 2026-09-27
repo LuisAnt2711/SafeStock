@@ -31,7 +31,7 @@ print("Leitor carregado com GPU.")
 # WEBCAM
 # =====================================================
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 if not cap.isOpened():
     cap = cv2.VideoCapture(1)

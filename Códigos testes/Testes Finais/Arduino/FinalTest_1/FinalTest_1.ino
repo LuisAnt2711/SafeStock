@@ -254,7 +254,7 @@ void loop() {
 
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("Coluna do remedio:");
+      lcd.print("ID do remedio:");
 
       lcd.setCursor(0, 1);
       lcd.print("> ");

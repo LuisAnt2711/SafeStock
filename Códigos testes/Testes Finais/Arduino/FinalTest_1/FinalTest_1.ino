@@ -26,7 +26,7 @@ const int ledVermelho = 2;
 
 #define NUM_LEDS 73
 #define DATA_PIN 6
-#define BRILHO 20
+#define BRILHO 80
 
 CRGB leds[NUM_LEDS];
 

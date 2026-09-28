@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.id = 'search-med';
-            searchInput.placeholder = '🔍 Buscar medicamento pelo nome...';
+            searchInput.placeholder = '🔍 Buscar medicamento pelo nome ou ID...';
             searchInput.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem;';
             searchInput.addEventListener('input', () => renderTable());
             
@@ -40,20 +40,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 h2Table.insertAdjacentElement('afterend', searchInput);
             }
         }
+
+        // Atualiza o cabeçalho da tabela para substituir COLUNA por ID
+        const tabelaHtml = tableContainer ? tableContainer.querySelector('table') : null;
+        if (tabelaHtml) {
+            const headerRow = tabelaHtml.querySelector('thead tr');
+            if (headerRow) {
+                headerRow.innerHTML = `
+                    <th>NOME</th>
+                    <th>ID</th>
+                    <th>QUANTIDADE</th>
+                    <th>VALIDADE / STATUS</th>
+                    <th>FILEIRA</th>
+                    <th>AÇÕES</th>
+                `;
+            }
+        }
     }
 
     function renderDashboard() {
         const hoje = new Date().toISOString().split('T')[0];
-        const total = medications.length;
-        const vencidos = medications.filter(med => med.expiry < hoje).length;
-        const estoqueBaixo = medications.filter(med => Number(med.quantity) <= 2 && med.expiry >= hoje).length;
-        const regulares = total - vencidos - estoqueBaixo;
+        
+        const total = medications.reduce((acc, med) => acc + (med && med.quantity ? Number(med.quantity) : 0), 0);
+        
+        const vencidos = medications
+            .filter(med => med && med.expiry && med.expiry < hoje)
+            .reduce((acc, med) => acc + Number(med.quantity), 0);
+
+        const estoqueBaixo = medications
+            .filter(med => med && Number(med.quantity) <= 2 && med.expiry >= hoje)
+            .reduce((acc, med) => acc + Number(med.quantity), 0);
+
+        const regulares = medications
+            .filter(med => med && med.expiry >= hoje && Number(med.quantity) > 2)
+            .reduce((acc, med) => acc + Number(med.quantity), 0);
 
         const statsDiv = document.getElementById('dashboard-stats');
         if (statsDiv) {
             statsDiv.innerHTML = `
                 <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; text-align: center; border-left: 4px solid #2196f3;">
-                    <span style="font-size: 0.85rem; color: #555;">Total</span><br><strong>${total}</strong>
+                    <span style="font-size: 0.85rem; color: #555;">Qtd. Total Estoque</span><br><strong>${total}</strong>
                 </div>
                 <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; text-align: center; border-left: 4px solid #4caf50;">
                     <span style="font-size: 0.85rem; color: #555;">Regulares</span><br><strong>${regulares}</strong>
@@ -74,7 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const hoje = new Date().toISOString().split('T')[0];
         const termoBusca = document.getElementById('search-med') ? document.getElementById('search-med').value.toLowerCase() : '';
 
-        const medicamentosFiltrados = medications.filter(med => med.name.toLowerCase().includes(termoBusca));
+        const medicamentosFiltrados = medications.filter(med => {
+            if (!med || !med.name) return false;
+            return med.name.toLowerCase().includes(termoBusca) || (med.id && med.id.toLowerCase().includes(termoBusca));
+        });
 
         medicamentosFiltrados.forEach((med) => {
             const realIndex = medications.indexOf(med);
@@ -96,13 +125,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tr.innerHTML = `
                 <td>${med.name}</td>
+                <td>${med.id || '-'}</td>
                 <td>${med.quantity}</td>
                 <td>${med.expiry.split('-').reverse().join('/')} ${statusHtml}</td>
                 <td>${med.fileira || '-'}</td>
-                <td>${med.coluna || '-'}</td>
                 <td>
-                    <button type="button" onclick="editMedication(${realIndex})" style="background-color: #f39c12; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 4px;">Editar</button>
-                    <button type="button" onclick="removeMedication(${realIndex})" style="background-color: #c0392b; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Remover</button>
+                    <button type="button" onclick="baixarMedication(${realIndex})" style="background-color: #27ae60; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 4px;">Dar Baixa</button>
+                    <button type="button" onclick="editMedication(${realIndex})" style="background-color: #f39c12; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Editar</button>
                 </td>
             `;
             medicationList.appendChild(tr);
@@ -112,16 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkAlerts() {
         if (!alertaVencidos || !textoAlerta) return;
         const hoje = new Date().toISOString().split('T')[0];
-        const vencidos = medications.filter(med => med.expiry < hoje);
-        const estoqueBaixo = medications.filter(med => Number(med.quantity) <= 2);
+        const vencidos = medications.filter(med => med && med.expiry && med.expiry < hoje);
+        const estoqueBaixo = medications.filter(med => med && Number(med.quantity) <= 2);
 
         let mensagens = [];
 
         if (vencidos.length > 0) {
-            mensagens.push(`${vencidos.length} produto(s) vencido(s)`);
+            mensagens.push(`${vencidos.length} lote(s) vencido(s)`);
         }
         if (estoqueBaixo.length > 0) {
-            mensagens.push(`${estoqueBaixo.length} produto(s) com estoque baixo`);
+            mensagens.push(`${estoqueBaixo.length} lote(s) com estoque baixo`);
         }
 
         if (mensagens.length > 0) {
@@ -138,33 +167,33 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
 
             const nameInput = document.getElementById('med-name');
+            const idInput = document.getElementById('med-id');
             const quantityInput = document.getElementById('med-quantity');
             const expiryInput = document.getElementById('med-expiry');
             const fileiraInput = document.getElementById('med-fileira');
-            const colunaInput = document.getElementById('med-coluna');
 
-            if (!nameInput || !quantityInput || !expiryInput || !fileiraInput || !colunaInput) return;
+            if (!nameInput || !quantityInput || !expiryInput || !fileiraInput) return;
 
             const name = nameInput.value;
-            const quantity = quantityInput.value;
+            const id = idInput ? idInput.value : '';
+            const quantity = Number(quantityInput.value);
             const expiry = expiryInput.value;
             const fileira = fileiraInput.value;
-            const coluna = colunaInput.value;
 
             if (editIndex !== null) {
-                medications[editIndex] = { name, quantity, expiry, fileira, coluna };
+                medications[editIndex] = { name, id, quantity, expiry, fileira };
                 editIndex = null;
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.textContent = 'Salvar Medicamento';
             } else {
-                medications.push({ name, quantity, expiry, fileira, coluna });
+                medications.push({ name, id, quantity, expiry, fileira });
 
                 const hoje = new Date().toISOString().split('T')[0];
                 if (expiry < hoje) {
-                    enviarAlerta(name, quantity, expiry, fileira, coluna, "VENCIDO");
+                    enviarAlerta(name, quantity, expiry, fileira, id, "VENCIDO");
                 } 
                 if (Number(quantity) <= 2) {
-                    enviarAlerta(name, quantity, expiry, fileira, coluna, "ESTOQUE_BAIXO");
+                    enviarAlerta(name, quantity, expiry, fileira, id, "ESTOQUE_BAIXO");
                 }
             }
 
@@ -173,24 +202,46 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.removeMedication = function(index) {
-        medications.splice(index, 1);
+    window.baixarMedication = function(index) {
+        const med = medications[index];
+        const qtdParaRetirar = prompt(`Quantas unidades de "${med.name}" deseja retirar? (Atual: ${med.quantity})`);
+        
+        if (qtdParaRetirar === null || qtdParaRetirar.trim() === "") return;
+
+        const qtdNum = Number(qtdParaRetirar);
+
+        if (isNaN(qtdNum) || qtdNum <= 0) {
+            alert("Por favor, digite um número válido!");
+            return;
+        }
+
+        if (qtdNum > Number(med.quantity)) {
+            alert("A quantidade a retirar é maior do que o estoque atual deste lote!");
+            return;
+        }
+
+        med.quantity = Number(med.quantity) - qtdNum;
+
+        if (med.quantity <= 0) {
+            medications.splice(index, 1);
+        }
+
         saveAndRender();
     };
 
     window.editMedication = function(index) {
         const med = medications[index];
         const nameInput = document.getElementById('med-name');
+        const idInput = document.getElementById('med-id');
         const quantityInput = document.getElementById('med-quantity');
         const expiryInput = document.getElementById('med-expiry');
         const fileiraInput = document.getElementById('med-fileira');
-        const colunaInput = document.getElementById('med-coluna');
 
         if (nameInput) nameInput.value = med.name;
+        if (idInput) idInput.value = med.id || '';
         if (quantityInput) quantityInput.value = med.quantity;
         if (expiryInput) expiryInput.value = med.expiry;
         if (fileiraInput) fileiraInput.value = med.fileira || '';
-        if (colunaInput) colunaInput.value = med.coluna || '';
         
         editIndex = index;
         const submitBtn = form.querySelector('button[type="submit"]');
@@ -203,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveAndRender();
 });
 
-function enviarAlerta(produtoNome, quantidadeProduto, dataValidade, fileiraProduto, colunaProduto, tipoAlerta) {
+function enviarAlerta(produtoNome, quantidadeProduto, dataValidade, fileiraProduto, idProduto, tipoAlerta) {
     let templateIdUsado = '';
 
     if (tipoAlerta === "VENCIDO") {
@@ -217,7 +268,7 @@ function enviarAlerta(produtoNome, quantidadeProduto, dataValidade, fileiraProdu
         quantity: quantidadeProduto,
         expiry_date: dataValidade,
         fileira: fileiraProduto,
-        coluna: colunaProduto,
+        id_produto: idProduto,
         email: "safestock.projete2026@gmail.com"
     };
 

@@ -35,6 +35,7 @@ CRGB leds[NUM_LEDS];
 // =====================================================
 
 const int BOTAO_ENCERRAR = 7;
+bool LOCK_INPUT = false;
 
 // =====================================================
 // SENSOR BIOMÉTRICO
@@ -175,7 +176,7 @@ void setup() {
 
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("Erro no sensor!");
+    lcd.print("Erro no Sensor!");
 
     while (1) {
       delay(1);
@@ -254,7 +255,7 @@ void loop() {
 
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("ID do remedio:");
+      lcd.print("ID do remedio: ");
 
       lcd.setCursor(0, 1);
       lcd.print("> ");
@@ -313,7 +314,7 @@ void loop() {
         valorDigitado += tecla;
 
         lcd.setCursor(2, 1);
-        lcd.print("                    ");
+        //lcd.print("                    ");
 
         lcd.setCursor(2, 1);
         lcd.print(valorDigitado);
@@ -358,7 +359,7 @@ void loop() {
           lcd.clear();
 
           lcd.setCursor(0, 0);
-          lcd.print("ID remedio: ");
+          lcd.print("ID do remedio: ");
           lcd.print(idRemedio);
 
           lcd.setCursor(0, 1);
@@ -387,12 +388,12 @@ void loop() {
       // NÚMERO
       // ------------------------------------------------
 
-      if (tecla >= '0' && tecla <= '9') {
+      if (tecla >= '0' && tecla <= '9' && LOCK_INPUT == false) {
 
         valorDigitado += tecla;
 
         lcd.setCursor(2, 2);
-        lcd.print("                    ");
+        //lcd.print("                    ");
 
         lcd.setCursor(2, 2);
         lcd.print(valorDigitado);
@@ -404,7 +405,7 @@ void loop() {
       // * = LIMPAR
       // ------------------------------------------------
 
-      else if (tecla == '*') {
+      else if (tecla == '*' && LOCK_INPUT == false) {
 
         valorDigitado = "";
 
@@ -419,7 +420,7 @@ void loop() {
       // # = CONFIRMAR
       // ------------------------------------------------
 
-      else if (tecla == '#') {
+      else if (tecla == '#' && LOCK_INPUT == false) {
 
         if (valorDigitado.length() > 0) {
 
@@ -448,6 +449,9 @@ void loop() {
           Serial.println("--------------------------------");
           Serial.println("Acesso em andamento.");
           Serial.println("Pressione o botao para encerrar.");
+
+          LOCK_INPUT = true;
+
         }
       }
     }
@@ -474,6 +478,8 @@ void loop() {
         idRemedio = -1;
         quantidade = 0;
         valorDigitado = "";
+
+        LOCK_INPUT = false;
 
         // Desliga LED verde
         digitalWrite(ledVerde, LOW);

@@ -14,13 +14,6 @@ const int idLuis = 27;
 const String nameLuis = "Luis Antonio Barbosa Pereira";
 
 // =====================================================
-// CONFIGURAÇÃO DOS LEDs
-// =====================================================
-
-const int ledVerde = 3;
-const int ledVermelho = 2;
-
-// =====================================================
 // CONFIGURAÇÃO DA FITA DE LED
 // =====================================================
 
@@ -126,16 +119,6 @@ void setup() {
   Serial2.begin(9600);
 
   // ---------------------------------------------------
-  // LEDs
-  // ---------------------------------------------------
-
-  pinMode(ledVerde, OUTPUT);
-  pinMode(ledVermelho, OUTPUT);
-
-  digitalWrite(ledVerde, LOW);
-  digitalWrite(ledVermelho, LOW);
-
-  // ---------------------------------------------------
   // FITA DE LED
   // ---------------------------------------------------
 
@@ -232,8 +215,6 @@ void loop() {
       }
 
       // LED VERDE
-      digitalWrite(ledVerde, HIGH);
-      digitalWrite(ledVermelho, LOW);
       fill_solid(leds, NUM_LEDS, CRGB::Green);
       FastLED.show();
 
@@ -272,8 +253,6 @@ void loop() {
 
       Serial.println("Digital nao reconhecida!");
 
-      digitalWrite(ledVermelho, HIGH);
-      digitalWrite(ledVerde, LOW);
       fill_solid(leds, NUM_LEDS, CRGB::Red);
       FastLED.show();
 
@@ -286,7 +265,6 @@ void loop() {
 
       delay(2000);
 
-      digitalWrite(ledVermelho, LOW);
       fill_solid(leds, NUM_LEDS, CRGB::Black);
       FastLED.show();
 
@@ -476,7 +454,6 @@ void loop() {
         valorDigitado = "";
 
         // Desliga LED verde
-        digitalWrite(ledVerde, LOW);
         fill_solid(leds, NUM_LEDS, CRGB::Black);
         FastLED.show();
 

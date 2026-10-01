@@ -175,10 +175,10 @@
         </div>
     </div>
 
-    <!-- 1. Chamada do arquivo script.js externo PRIMEIRO (para carregar funções globais como saveAndRender) -->
-    <script src="script.js"></script>
+    <!-- Chamada do script principal configurado como Módulo JavaScript (Compatível com SQLite WebAssembly) -->
+    <script type="module" src="script.js"></script>
 
-    <!-- 2. Script de Controle de Telas, Abas e Comunicação com o ESP32 -->
+    <!-- Script de Controle de Telas, Abas e Comunicação com o ESP32 -->
     <script>
         const formAuth = document.getElementById('form-autenticacao');
         const loginSection = document.getElementById('login-section');
@@ -337,33 +337,9 @@
                             atualizarTabelaHistorico();
 
                             if (nomeRemedio && nomeRemedio !== "-") {
-                                let medications = JSON.parse(localStorage.getItem('medications')) || [];
-                                let medicamentoEncontrado = medications.find(med => med.name.toLowerCase().includes(nomeRemedio.toLowerCase()));
-
-                                if (medicamentoEncontrado) {
-                                    let estoqueAtual = Number(medicamentoEncontrado.quantity);
-                                    medicamentoEncontrado.quantity = Math.max(0, estoqueAtual - qtdRetirada);
-                                    localStorage.setItem('medications', JSON.stringify(medications));
-
-                                    if (typeof saveAndRender === 'function') {
-                                        saveAndRender();
-                                    }
-
-                                    let historicoRetiradas = JSON.parse(localStorage.getItem('historicoRetiradas')) || [];
-                                    const novaRetirada = {
-                                        usuario: usuarioFormatado,
-                                        remedio: medicamentoEncontrado.name,
-                                        quantidadeRetirada: qtdRetirada,
-                                        dataHora: dataHoraAtual,
-                                        timestamp: new Date().getTime()
-                                    };
-
-                                    const ultimaRetirada = historicoRetiradas[0];
-                                    if (!ultimaRetirada || (novaRetirada.timestamp - ultimaRetirada.timestamp > 5000)) {
-                                        historicoRetiradas.unshift(novaRetirada);
-                                        localStorage.setItem('historicoRetiradas', JSON.stringify(historicoRetiradas));
-                                        atualizarTabelaRetirada();
-                                    }
+                                // Interage agora com a função global do banco SQLite definida no script.js
+                                if (typeof window.atualizarQuantidadePorNomeNoBanco === 'function') {
+                                    window.atualizarQuantidadePorNomeNoBanco(nomeRemedio, qtdRetirada, usuarioFormatado, dataHoraAtual);
                                 }
                             }
                         }

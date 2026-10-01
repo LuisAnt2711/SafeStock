@@ -1,20 +1,80 @@
+import sqlite3InitModule from './sqlite/sqlite-wasm-3530400/jswasm/sqlite3.mjs';
+
 emailjs.init("IkgFer8WsM9rmiefY");
 
-document.addEventListener('DOMContentLoaded', () => {
+let db = null;
+let medications = [];
+let saveAndRender = null; // Declarado globalmente para acesso nas funções de callback
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Inicializar o SQLite WebAssembly
+    try {
+        const sqlite3 = await sqlite3InitModule();
+        
+        if ('opfs' in sqlite3) {
+            db = new sqlite3.oo1.OpfsDb('safestock.sqlite3');
+            console.log("Banco SQLite persistente (OPFS) carregado com sucesso!");
+        } else {
+            db = new sqlite3.oo1.DB('safestock.sqlite3', 'ct');
+            console.log("Banco SQLite em memória carregado.");
+        }
+
+        // Criar a tabela de medicamentos
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS medications (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                expiry TEXT NOT NULL,
+                fileira TEXT
+            );
+        `);
+
+        // Carregar os dados existentes do banco para a memória
+        loadMedicationsFromDb();
+
+    } catch (err) {
+        console.error("Erro ao inicializar o SQLite Wasm:", err);
+    }
+
     const form = document.getElementById('medication-form');
     const medicationList = document.getElementById('medication-list');
     const alertaVencidos = document.getElementById('alerta-vencidos');
     const textoAlerta = document.getElementById('texto-alerta');
 
-    let medications = JSON.parse(localStorage.getItem('medications')) || [];
     let editIndex = null; // Controla se estamos editando um item
 
-    function saveAndRender() {
-        localStorage.setItem('medications', JSON.stringify(medications));
+    function loadMedicationsFromDb() {
+        if (!db) return;
+        medications = [];
+        db.exec({
+            sql: 'SELECT * FROM medications;',
+            row: 'object',
+            callback: function(row) {
+                medications.push(row);
+            }
+        });
         renderDashboard();
         renderTable();
         checkAlerts();
     }
+
+    saveAndRender = function() {
+        if (db) {
+            // Sincroniza o array com o SQLite de forma limpa
+            db.exec('DELETE FROM medications;');
+            medications.forEach((med, idx) => {
+                const uniqueId = med.id && med.id.trim() !== '' ? med.id : `id_${idx}_${Date.now()}`;
+                db.exec({
+                    sql: 'INSERT INTO medications (id, name, quantity, expiry, fileira) VALUES (?, ?, ?, ?, ?);',
+                    bind: [uniqueId, med.name, med.quantity, med.expiry, med.fileira || '']
+                });
+            });
+        }
+        renderDashboard();
+        renderTable();
+        checkAlerts();
+    };
 
     // Cria o painel de estatísticas e a barra de busca dinamicamente se não existirem
     function criarElementosVisuais() {
@@ -226,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
             medications.splice(index, 1);
         }
 
-        saveAndRender();
+        if (saveAndRender) saveAndRender();
     };
 
     window.editMedication = function(index) {
@@ -251,7 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     criarElementosVisuais();
-    saveAndRender();
 });
 
 function enviarAlerta(produtoNome, quantidadeProduto, dataValidade, fileiraProduto, idProduto, tipoAlerta) {

@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.baixarMedication = async function(index) {
+   window.baixarMedication = async function(index) {
         const med = medications[index];
         if (!med) return;
 

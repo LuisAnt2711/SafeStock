@@ -1,80 +1,47 @@
-import sqlite3InitModule from './sqlite/sqlite-wasm-3530400/jswasm/sqlite3.mjs';
-
 emailjs.init("IkgFer8WsM9rmiefY");
 
-let db = null;
+const API_URL = 'http://localhost:3000/api/medications';
+
 let medications = [];
-let saveAndRender = null; // Declarado globalmente para acesso nas funções de callback
+
+// Função auxiliar para falar com o servidor
+async function api(caminho = '', opcoes = {}) {
+    const resp = await fetch(API_URL + caminho, {
+        headers: { 'Content-Type': 'application/json' },
+        ...opcoes
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.erro || `Erro ${resp.status}`);
+    return data;
+}
+
+// Evita que textos digitados quebrem o HTML da tabela
+function esc(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Inicializar o SQLite WebAssembly
-    try {
-        const sqlite3 = await sqlite3InitModule();
-        
-        if ('opfs' in sqlite3) {
-            db = new sqlite3.oo1.OpfsDb('safestock.sqlite3');
-            console.log("Banco SQLite persistente (OPFS) carregado com sucesso!");
-        } else {
-            db = new sqlite3.oo1.DB('safestock.sqlite3', 'ct');
-            console.log("Banco SQLite em memória carregado.");
-        }
-
-        // Criar a tabela de medicamentos
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS medications (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                expiry TEXT NOT NULL,
-                fileira TEXT
-            );
-        `);
-
-        // Carregar os dados existentes do banco para a memória
-        loadMedicationsFromDb();
-
-    } catch (err) {
-        console.error("Erro ao inicializar o SQLite Wasm:", err);
-    }
-
     const form = document.getElementById('medication-form');
     const medicationList = document.getElementById('medication-list');
     const alertaVencidos = document.getElementById('alerta-vencidos');
     const textoAlerta = document.getElementById('texto-alerta');
 
-    let editIndex = null; // Controla se estamos editando um item
+    let editUid = null; // uid do lote que está sendo editado (null = cadastro novo)
 
-    function loadMedicationsFromDb() {
-        if (!db) return;
-        medications = [];
-        db.exec({
-            sql: 'SELECT * FROM medications;',
-            row: 'object',
-            callback: function(row) {
-                medications.push(row);
-            }
-        });
-        renderDashboard();
-        renderTable();
-        checkAlerts();
-    }
-
-    saveAndRender = function() {
-        if (db) {
-            // Sincroniza o array com o SQLite de forma limpa
-            db.exec('DELETE FROM medications;');
-            medications.forEach((med, idx) => {
-                const uniqueId = med.id && med.id.trim() !== '' ? med.id : `id_${idx}_${Date.now()}`;
-                db.exec({
-                    sql: 'INSERT INTO medications (id, name, quantity, expiry, fileira) VALUES (?, ?, ?, ?, ?);',
-                    bind: [uniqueId, med.name, med.quantity, med.expiry, med.fileira || '']
-                });
-            });
+    async function loadMedications() {
+        try {
+            medications = await api();
+        } catch (err) {
+            console.error('Erro ao carregar medicamentos:', err);
+            alert('Não foi possível conectar ao banco de dados. Verifique se o servidor está rodando (node server.js).');
+            medications = [];
         }
         renderDashboard();
         renderTable();
         checkAlerts();
-    };
+    }
 
     // Cria o painel de estatísticas e a barra de busca dinamicamente se não existirem
     function criarElementosVisuais() {
@@ -94,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchInput.placeholder = '🔍 Buscar medicamento pelo nome ou ID...';
             searchInput.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem;';
             searchInput.addEventListener('input', () => renderTable());
-            
+
             const h2Table = tableContainer.querySelector('h2');
             if (h2Table) {
                 h2Table.insertAdjacentElement('afterend', searchInput);
@@ -120,9 +87,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderDashboard() {
         const hoje = new Date().toISOString().split('T')[0];
-        
+
         const total = medications.reduce((acc, med) => acc + (med && med.quantity ? Number(med.quantity) : 0), 0);
-        
+
         const vencidos = medications
             .filter(med => med && med.expiry && med.expiry < hoje)
             .reduce((acc, med) => acc + Number(med.quantity), 0);
@@ -168,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         medicamentosFiltrados.forEach((med) => {
             const realIndex = medications.indexOf(med);
             const tr = document.createElement('tr');
-            
+
             if (med.expiry < hoje) {
                 tr.style.backgroundColor = '#ffd2d2';
             } else if (Number(med.quantity) <= 2) {
@@ -184,11 +151,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             tr.innerHTML = `
-                <td>${med.name}</td>
-                <td>${med.id || '-'}</td>
+                <td>${esc(med.name)}</td>
+                <td>${esc(med.id) || '-'}</td>
                 <td>${med.quantity}</td>
                 <td>${med.expiry.split('-').reverse().join('/')} ${statusHtml}</td>
-                <td>${med.fileira || '-'}</td>
+                <td>${esc(med.fileira) || '-'}</td>
                 <td>
                     <button type="button" onclick="baixarMedication(${realIndex})" style="background-color: #27ae60; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 4px;">Dar Baixa</button>
                     <button type="button" onclick="editMedication(${realIndex})" style="background-color: #f39c12; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Editar</button>
@@ -223,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (form) {
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const nameInput = document.getElementById('med-name');
@@ -239,33 +206,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             const quantity = Number(quantityInput.value);
             const expiry = expiryInput.value;
             const fileira = fileiraInput.value;
+            const dados = { name, id, quantity, expiry, fileira };
 
-            if (editIndex !== null) {
-                medications[editIndex] = { name, id, quantity, expiry, fileira };
-                editIndex = null;
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) submitBtn.textContent = 'Salvar Medicamento';
-            } else {
-                medications.push({ name, id, quantity, expiry, fileira });
+            try {
+                if (editUid !== null) {
+                    await api(`/${editUid}`, { method: 'PUT', body: JSON.stringify(dados) });
+                    editUid = null;
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.textContent = 'Salvar Medicamento';
+                } else {
+                    await api('', { method: 'POST', body: JSON.stringify(dados) });
 
-                const hoje = new Date().toISOString().split('T')[0];
-                if (expiry < hoje) {
-                    enviarAlerta(name, quantity, expiry, fileira, id, "VENCIDO");
-                } 
-                if (Number(quantity) <= 2) {
-                    enviarAlerta(name, quantity, expiry, fileira, id, "ESTOQUE_BAIXO");
+                    const hoje = new Date().toISOString().split('T')[0];
+                    if (expiry < hoje) {
+                        enviarAlerta(name, quantity, expiry, fileira, id, "VENCIDO");
+                    }
+                    if (quantity <= 2) {
+                        enviarAlerta(name, quantity, expiry, fileira, id, "ESTOQUE_BAIXO");
+                    }
                 }
-            }
 
-            saveAndRender();
-            form.reset();
+                await loadMedications();
+                form.reset();
+            } catch (err) {
+                alert('Erro ao salvar: ' + err.message);
+            }
         });
     }
 
-    window.baixarMedication = function(index) {
+    window.baixarMedication = async function(index) {
         const med = medications[index];
+        if (!med) return;
+
         const qtdParaRetirar = prompt(`Quantas unidades de "${med.name}" deseja retirar? (Atual: ${med.quantity})`);
-        
+
         if (qtdParaRetirar === null || qtdParaRetirar.trim() === "") return;
 
         const qtdNum = Number(qtdParaRetirar);
@@ -280,17 +254,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        med.quantity = Number(med.quantity) - qtdNum;
-
-        if (med.quantity <= 0) {
-            medications.splice(index, 1);
+        try {
+            await api(`/${med.uid}/baixa`, { method: 'PATCH', body: JSON.stringify({ quantidade: qtdNum }) });
+            await loadMedications();
+        } catch (err) {
+            alert('Erro ao dar baixa: ' + err.message);
         }
-
-        if (saveAndRender) saveAndRender();
     };
 
     window.editMedication = function(index) {
         const med = medications[index];
+        if (!med) return;
+
         const nameInput = document.getElementById('med-name');
         const idInput = document.getElementById('med-id');
         const quantityInput = document.getElementById('med-quantity');
@@ -302,15 +277,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (quantityInput) quantityInput.value = med.quantity;
         if (expiryInput) expiryInput.value = med.expiry;
         if (fileiraInput) fileiraInput.value = med.fileira || '';
-        
-        editIndex = index;
+
+        editUid = med.uid;
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.textContent = 'Salvar Alteração';
-        
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     criarElementosVisuais();
+    await loadMedications();
 });
 
 function enviarAlerta(produtoNome, quantidadeProduto, dataValidade, fileiraProduto, idProduto, tipoAlerta) {

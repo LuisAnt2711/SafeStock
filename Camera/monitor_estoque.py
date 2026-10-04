@@ -27,9 +27,9 @@ DICIONARIO = cv2.aruco.DICT_4X4_100
 # Filas na ordem da prateleira: de cima para baixo, da esquerda para a direita.
 # O marcador de ID = fila * 4 + (posição - 1), com posição 1 = frente.
 FILAS = [
-    'Remédio N', 'Remédio P', 'Remédio L', 'Remédio J', 'Remédio K',   # prateleira 1
-    'Remédio M', 'Remédio H', 'Remédio F', 'Remédio G', 'Remédio D',   # prateleira 2
-    'Remédio E', 'Remédio C', 'Remédio B', 'Remédio A', 'Remédio B',   # prateleira 3
+    'Remédio A', 'Remédio B', 'Remédio C', 'Remédio D', 'Remédio E',   # prateleira 1
+    'Remédio F', 'Remédio G', 'Remédio H', 'Remédio J', 'Remédio K',   # prateleira 2
+    'Remédio L', 'Remédio M', 'Remédio N', 'Remédio P', 'Remédio Q',   # prateleira 3
 ]
 # -----------------------------------------------------------------------------
 

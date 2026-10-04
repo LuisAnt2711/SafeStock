@@ -305,6 +305,7 @@
         // INTEGRAÇÃO COM O ESP32 (BUSCA AUTOMÁTICA E BAIXA NO ESTOQUE)
         // =====================================================
         const IP_ESP32 = "http://10.142.121.202";
+        const ATRASO_SYNC_MS = 10000; // tempo para a pessoa pegar a caixa e tirar a mão
 
         function buscarDadosDoESP32() {
             fetch(`${IP_ESP32}/dados`)
@@ -336,12 +337,12 @@
                             localStorage.setItem('historicoAcessos', JSON.stringify(historico));
                             atualizarTabelaHistorico();
 
-                            if (nomeRemedio && nomeRemedio !== "-") {
-                                // Interage agora com a função global do banco SQLite definida no script.js
-                                if (typeof window.atualizarQuantidadePorNomeNoBanco === 'function') {
-                                    window.atualizarQuantidadePorNomeNoBanco(nomeRemedio, qtdRetirada, usuarioFormatado, dataHoraAtual);
+                            // Cada novo registro de acesso => consulta a câmera e atualiza o banco
+                            setTimeout(() => {
+                                if (typeof window.sincronizarEstoqueComCamera === 'function') {
+                                    window.sincronizarEstoqueComCamera(usuarioFormatado, dataHoraAtual);
                                 }
-                            }
+                            }, ATRASO_SYNC_MS);
                         }
                     }
                 })

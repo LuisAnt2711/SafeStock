@@ -285,6 +285,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const URL_CAMERA = 'http://127.0.0.1:5000/estoque';
+    let sincronizando = false;
+
+    // Pede à câmera a contagem de cada fila e grava no banco o que mudou
+    window.sincronizarEstoqueComCamera = async function (usuario = 'Acesso biométrico', dataHora = '') {
+        if (sincronizando) return;
+        sincronizando = true;
+        try {
+            const resp = await fetch(URL_CAMERA, { cache: 'no-store' });
+            if (!resp.ok) throw new Error(`Câmera respondeu ${resp.status}`);
+            const camera = await resp.json();
+            if (!camera.calibrado) {
+                console.warn('Câmera ainda calibrando; sincronização ignorada.');
+                return;
+            }
+
+            // Garante que a lista local está igual ao banco antes de comparar
+            medications = await api();
+
+            const retiradas = JSON.parse(localStorage.getItem('historicoRetiradas')) || [];
+            let mudou = false;
+
+            for (const item of camera.itens) {
+                const med = medications.find(m => String(m.id) === String(item.id));
+                if (!med) continue;
+
+                const antiga = Number(med.quantity);
+                const nova = Number(item.quantidade);
+                if (antiga === nova) continue;
+
+                await api(`/${med.uid}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: med.name, id: med.id, quantity: nova,
+                        expiry: med.expiry, fileira: med.fileira
+                    })
+                });
+                mudou = true;
+
+                // Registra na aba "Histórico de Retirada" (só quando diminuiu)
+                if (nova < antiga) {
+                    retiradas.unshift({
+                        usuario,
+                        remedio: `${med.name} (ID: ${med.id})`,
+                        quantidadeRetirada: antiga - nova,
+                        dataHora: dataHora || new Date().toLocaleString('pt-BR')
+                    });
+                    // Alerta por e-mail ao cruzar para estoque baixo
+                    if (nova <= 2 && antiga > 2) {
+                        enviarAlerta(med.name, nova, med.expiry, med.fileira, med.id, 'ESTOQUE_BAIXO');
+                    }
+                }
+            }
+
+            if (mudou) {
+                localStorage.setItem('historicoRetiradas', JSON.stringify(retiradas));
+                if (typeof window.atualizarTabelaRetirada === 'function') window.atualizarTabelaRetirada();
+                await loadMedications();
+            }
+        } catch (err) {
+            console.error('Erro ao sincronizar com a câmera:', err);
+        } finally {
+            sincronizando = false;
+        }
+    };
+
     criarElementosVisuais();
     await loadMedications();
 });

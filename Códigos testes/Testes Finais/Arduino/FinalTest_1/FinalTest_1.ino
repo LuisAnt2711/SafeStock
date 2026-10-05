@@ -299,6 +299,7 @@ void loop() {
   // ESTADO 2 - DIGITANDO ID DO REMÉDIO
   // ===================================================
 
+
   else if (estadoAtual == DIGITANDO_REMEDIO) {
 
     char tecla = teclado.getKey();

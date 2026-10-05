@@ -31,7 +31,10 @@ print("Leitor carregado com GPU.")
 # WEBCAM
 # =====================================================
 
+
 cap = cv2.VideoCapture(1)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
 if not cap.isOpened():
     cap = cv2.VideoCapture(1)
@@ -102,7 +105,11 @@ def reconhecer_numeros():
         # Faz o reconhecimento
         resultados = reader.readtext(
             frame_para_ocr,
-            allowlist='123456'
+            allowlist='123456',
+            low_text = 0.6,
+            link_threshold=0.8,
+            add_margin=0.05,
+            mag_ratio=2,
         )
 
         novos_resultados = []
@@ -114,7 +121,7 @@ def reconhecer_numeros():
             )
 
             if (
-                confianca > 0.4
+                confianca > 0.7
                 and texto_limpo in numeros_alvo
             ):
 

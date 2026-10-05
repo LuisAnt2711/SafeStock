@@ -1,16 +1,43 @@
 emailjs.init("IkgFer8WsM9rmiefY");
 
-document.addEventListener('DOMContentLoaded', () => {
+const API_URL = 'http://localhost:3000/api/medications';
+
+let medications = [];
+
+// Função auxiliar para falar com o servidor
+async function api(caminho = '', opcoes = {}) {
+    const resp = await fetch(API_URL + caminho, {
+        headers: { 'Content-Type': 'application/json' },
+        ...opcoes
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.erro || `Erro ${resp.status}`);
+    return data;
+}
+
+// Evita que textos digitados quebrem o HTML da tabela
+function esc(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('medication-form');
     const medicationList = document.getElementById('medication-list');
     const alertaVencidos = document.getElementById('alerta-vencidos');
     const textoAlerta = document.getElementById('texto-alerta');
 
-    let medications = JSON.parse(localStorage.getItem('medications')) || [];
-    let editIndex = null; // Controla se estamos editando um item
+    let editUid = null; // uid do lote que está sendo editado (null = cadastro novo)
 
-    function saveAndRender() {
-        localStorage.setItem('medications', JSON.stringify(medications));
+    async function loadMedications() {
+        try {
+            medications = await api();
+        } catch (err) {
+            console.error('Erro ao carregar medicamentos:', err);
+            alert('Não foi possível conectar ao banco de dados. Verifique se o servidor está rodando (node server.js).');
+            medications = [];
+        }
         renderDashboard();
         renderTable();
         checkAlerts();
@@ -34,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.placeholder = '🔍 Buscar medicamento pelo nome ou ID...';
             searchInput.style.cssText = 'width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem;';
             searchInput.addEventListener('input', () => renderTable());
-            
+
             const h2Table = tableContainer.querySelector('h2');
             if (h2Table) {
                 h2Table.insertAdjacentElement('afterend', searchInput);
@@ -60,9 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderDashboard() {
         const hoje = new Date().toISOString().split('T')[0];
-        
+
         const total = medications.reduce((acc, med) => acc + (med && med.quantity ? Number(med.quantity) : 0), 0);
-        
+
         const vencidos = medications
             .filter(med => med && med.expiry && med.expiry < hoje)
             .reduce((acc, med) => acc + Number(med.quantity), 0);
@@ -108,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         medicamentosFiltrados.forEach((med) => {
             const realIndex = medications.indexOf(med);
             const tr = document.createElement('tr');
-            
+
             if (med.expiry < hoje) {
                 tr.style.backgroundColor = '#ffd2d2';
             } else if (Number(med.quantity) <= 2) {
@@ -124,11 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             tr.innerHTML = `
-                <td>${med.name}</td>
-                <td>${med.id || '-'}</td>
+                <td>${esc(med.name)}</td>
+                <td>${esc(med.id) || '-'}</td>
                 <td>${med.quantity}</td>
                 <td>${med.expiry.split('-').reverse().join('/')} ${statusHtml}</td>
-                <td>${med.fileira || '-'}</td>
+                <td>${esc(med.fileira) || '-'}</td>
                 <td>
                     <button type="button" onclick="baixarMedication(${realIndex})" style="background-color: #27ae60; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 4px;">Dar Baixa</button>
                     <button type="button" onclick="editMedication(${realIndex})" style="background-color: #f39c12; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Editar</button>
@@ -163,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (form) {
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const nameInput = document.getElementById('med-name');
@@ -179,33 +206,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const quantity = Number(quantityInput.value);
             const expiry = expiryInput.value;
             const fileira = fileiraInput.value;
+            const dados = { name, id, quantity, expiry, fileira };
 
-            if (editIndex !== null) {
-                medications[editIndex] = { name, id, quantity, expiry, fileira };
-                editIndex = null;
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) submitBtn.textContent = 'Salvar Medicamento';
-            } else {
-                medications.push({ name, id, quantity, expiry, fileira });
+            try {
+                if (editUid !== null) {
+                    await api(`/${editUid}`, { method: 'PUT', body: JSON.stringify(dados) });
+                    editUid = null;
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.textContent = 'Salvar Medicamento';
+                } else {
+                    await api('', { method: 'POST', body: JSON.stringify(dados) });
 
-                const hoje = new Date().toISOString().split('T')[0];
-                if (expiry < hoje) {
-                    enviarAlerta(name, quantity, expiry, fileira, id, "VENCIDO");
-                } 
-                if (Number(quantity) <= 2) {
-                    enviarAlerta(name, quantity, expiry, fileira, id, "ESTOQUE_BAIXO");
+                    const hoje = new Date().toISOString().split('T')[0];
+                    if (expiry < hoje) {
+                        enviarAlerta(name, quantity, expiry, fileira, id, "VENCIDO");
+                    }
+                    if (quantity <= 2) {
+                        enviarAlerta(name, quantity, expiry, fileira, id, "ESTOQUE_BAIXO");
+                    }
                 }
-            }
 
-            saveAndRender();
-            form.reset();
+                await loadMedications();
+                form.reset();
+            } catch (err) {
+                alert('Erro ao salvar: ' + err.message);
+            }
         });
     }
 
-    window.baixarMedication = function(index) {
+   window.baixarMedication = async function(index) {
         const med = medications[index];
+        if (!med) return;
+
         const qtdParaRetirar = prompt(`Quantas unidades de "${med.name}" deseja retirar? (Atual: ${med.quantity})`);
-        
+
         if (qtdParaRetirar === null || qtdParaRetirar.trim() === "") return;
 
         const qtdNum = Number(qtdParaRetirar);
@@ -220,17 +254,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        med.quantity = Number(med.quantity) - qtdNum;
-
-        if (med.quantity <= 0) {
-            medications.splice(index, 1);
+        try {
+            await api(`/${med.uid}/baixa`, { method: 'PATCH', body: JSON.stringify({ quantidade: qtdNum }) });
+            await loadMedications();
+        } catch (err) {
+            alert('Erro ao dar baixa: ' + err.message);
         }
-
-        saveAndRender();
     };
 
     window.editMedication = function(index) {
         const med = medications[index];
+        if (!med) return;
+
         const nameInput = document.getElementById('med-name');
         const idInput = document.getElementById('med-id');
         const quantityInput = document.getElementById('med-quantity');
@@ -242,16 +277,82 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quantityInput) quantityInput.value = med.quantity;
         if (expiryInput) expiryInput.value = med.expiry;
         if (fileiraInput) fileiraInput.value = med.fileira || '';
-        
-        editIndex = index;
+
+        editUid = med.uid;
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.textContent = 'Salvar Alteração';
-        
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const URL_CAMERA = 'http://127.0.0.1:5000/estoque';
+    let sincronizando = false;
+
+    // Pede à câmera a contagem de cada fila e grava no banco o que mudou
+    window.sincronizarEstoqueComCamera = async function (usuario = 'Acesso biométrico', dataHora = '') {
+        if (sincronizando) return;
+        sincronizando = true;
+        try {
+            const resp = await fetch(URL_CAMERA, { cache: 'no-store' });
+            if (!resp.ok) throw new Error(`Câmera respondeu ${resp.status}`);
+            const camera = await resp.json();
+            if (!camera.calibrado) {
+                console.warn('Câmera ainda calibrando; sincronização ignorada.');
+                return;
+            }
+
+            // Garante que a lista local está igual ao banco antes de comparar
+            medications = await api();
+
+            const retiradas = JSON.parse(localStorage.getItem('historicoRetiradas')) || [];
+            let mudou = false;
+
+            for (const item of camera.itens) {
+                const med = medications.find(m => String(m.id) === String(item.id));
+                if (!med) continue;
+
+                const antiga = Number(med.quantity);
+                const nova = Number(item.quantidade);
+                if (antiga === nova) continue;
+
+                await api(`/${med.uid}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: med.name, id: med.id, quantity: nova,
+                        expiry: med.expiry, fileira: med.fileira
+                    })
+                });
+                mudou = true;
+
+                // Registra na aba "Histórico de Retirada" (só quando diminuiu)
+                if (nova < antiga) {
+                    retiradas.unshift({
+                        usuario,
+                        remedio: `${med.name} (ID: ${med.id})`,
+                        quantidadeRetirada: antiga - nova,
+                        dataHora: dataHora || new Date().toLocaleString('pt-BR')
+                    });
+                    // Alerta por e-mail ao cruzar para estoque baixo
+                    if (nova <= 2 && antiga > 2) {
+                        enviarAlerta(med.name, nova, med.expiry, med.fileira, med.id, 'ESTOQUE_BAIXO');
+                    }
+                }
+            }
+
+            if (mudou) {
+                localStorage.setItem('historicoRetiradas', JSON.stringify(retiradas));
+                if (typeof window.atualizarTabelaRetirada === 'function') window.atualizarTabelaRetirada();
+                await loadMedications();
+            }
+        } catch (err) {
+            console.error('Erro ao sincronizar com a câmera:', err);
+        } finally {
+            sincronizando = false;
+        }
+    };
+
     criarElementosVisuais();
-    saveAndRender();
+    await loadMedications();
 });
 
 function enviarAlerta(produtoNome, quantidadeProduto, dataValidade, fileiraProduto, idProduto, tipoAlerta) {
